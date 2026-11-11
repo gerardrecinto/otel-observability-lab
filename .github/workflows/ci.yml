@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  stack:
+    name: Start the stack and query every backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the checks
+        run: ./scripts/test.sh
+      - name: Show container logs if it failed
+        if: failure()
+        run: docker compose logs --tail 60

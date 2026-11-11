@@ -39,12 +39,8 @@ services:
     depends_on: [mimir, loki, tempo]
 
   checkout-demo:
-    image: python:3.12-slim
-    working_dir: /app
-    volumes:
-      - ./app:/app:ro
-    command: >
-      sh -c "pip install -q -r requirements.txt && python checkout_demo.py"
+    build: ./app
+    image: ghcr.io/gerardrecinto/otel-observability-lab-checkout-demo:latest
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     depends_on: [otel-collector]

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>otel-observability-lab</title>
+<meta name="description" content="One service sends traces, metrics and logs over OpenTelemetry to a Collector that routes them to Tempo, Mimir and Loki, with Grafana in front. Real recorded results.">
+<link rel="icon" href="data:,">
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1c1a;--mut:#6b6b66;--card:#fff;--line:#dcdcd6;--ok:#1b7f4b;--bad:#b3261e;--link:#3b6fd4;--c0:#3b6fd4;--c1:#1b7f4b;--c2:#b3261e;--c3:#9a6700;--code:#efefe9}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--fg:#ecece8;--mut:#9a9a94;--card:#1d1d1b;--line:#333330;--ok:#3fb97a;--bad:#e06666;--link:#6d9bf0;--c0:#6d9bf0;--c1:#3fb97a;--c2:#e06666;--c3:#e5a824;--code:#262624}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:28px 16px 56px}
+h1{font-size:30px;margin:0 0 6px;letter-spacing:-.01em}
+h2{font-size:17px;margin:34px 0 10px}
+p{margin:6px 0}.mut{color:var(--mut)}
+.lead{font-size:17px;max-width:760px}
+.pills span{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:99px;padding:2px 10px;margin:8px 6px 0 0;background:var(--card);color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.stat b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--mut)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+code,pre{font:12.5px/1.45 ui-monospace,Menlo,monospace}
+code{background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);padding:10px 12px;border-radius:8px;overflow:auto;margin:8px 0 0}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--mut);font:10px system-ui}
+.ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}
+.note{border-left:3px solid var(--c3);padding-left:12px;margin:10px 0}
+a{color:var(--link)}
+footer{margin-top:40px;font-size:13px;color:var(--mut)}
+</style>
+</head>
+<body>
+<main>
+<h1>otel-observability-lab</h1>
+<p class="lead">A small checkout service sends traces, metrics and logs over OpenTelemetry to a Collector. The Collector routes each signal to its own backend: Mimir for metrics, Loki for logs, Tempo for traces. Grafana sits in front. Every number on this page was read back from those backends.</p>
+<div class="pills"><span>OpenTelemetry Collector</span><span>Mimir</span><span>Loki</span><span>Tempo</span><span>Grafana</span><span>PromQL / LogQL / TraceQL</span><span>Docker Compose</span></div>
+<p class="mut" style="margin-top:10px">Recorded <span id="rec">...</span>. Source: <a href="https://github.com/gerardrecinto/otel-observability-lab">github.com/gerardrecinto/otel-observability-lab</a></p>
+
+<h2>What it looks like</h2>
+<div class="grid" id="stats"></div>
+
+<h2>How the signals flow</h2>
+<div class="card">
+<svg viewBox="0 0 900 250" role="img" aria-label="checkout-demo sends OTLP to the Collector, which fans out to Mimir, Loki and Tempo, all read by Grafana">
+<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor" style="color:var(--mut)"/></marker></defs>
+<g stroke="var(--line)" fill="var(--card)" stroke-width="1.2">
+<rect x="10" y="95" width="170" height="60" rx="8"/>
+<rect x="250" y="95" width="170" height="60" rx="8"/>
+<rect x="520" y="20" width="150" height="48" rx="8"/>
+<rect x="520" y="101" width="150" height="48" rx="8"/>
+<rect x="520" y="182" width="150" height="48" rx="8"/>
+<rect x="740" y="95" width="150" height="60" rx="8"/>
+</g>
+<g font-size="13" style="fill:var(--fg)" text-anchor="middle">
+<text x="95" y="122" style="fill:var(--fg);font-size:13px">checkout-demo</text><text x="95" y="140">Python, OTel SDK</text>
+<text x="335" y="122" style="fill:var(--fg);font-size:13px">OTel Collector</text><text x="335" y="140">one pipeline per signal</text>
+<text x="595" y="49" style="fill:var(--fg);font-size:13px">Mimir (metrics)</text>
+<text x="595" y="130" style="fill:var(--fg);font-size:13px">Loki (logs)</text>
+<text x="595" y="211" style="fill:var(--fg);font-size:13px">Tempo (traces)</text>
+<text x="815" y="122" style="fill:var(--fg);font-size:13px">Grafana</text><text x="815" y="140">3 data sources</text>
+</g>
+<g stroke="var(--mut)" stroke-width="1.4" fill="none" marker-end="url(#ar)">
+<path d="M180,125 H248"/>
+<path d="M420,115 C470,115 470,44 518,44"/>
+<path d="M420,125 H518"/>
+<path d="M420,135 C470,135 470,206 518,206"/>
+<path d="M670,44 C710,44 710,110 738,110"/>
+<path d="M670,125 H738"/>
+<path d="M670,206 C710,206 710,140 738,140"/>
+</g>
+<g style="fill:var(--mut)" font-size="10">
+<text x="214" y="115" text-anchor="middle">OTLP/HTTP</text>
+<text x="478" y="70" text-anchor="middle">remote write</text>
+<text x="470" y="119" text-anchor="middle">OTLP/HTTP</text>
+<text x="478" y="206" text-anchor="middle">OTLP/gRPC</text>
+</g>
+</svg>
+</div>
+
+<h2>Metrics: asked of Mimir with PromQL</h2>
+<div class="grid">
+<div class="card"><h3 style="margin:0 0 4px;font-size:14px">Requests per second</h3><p class="mut" style="font-size:12px"><code>sum(rate(checkout_requests_total[1m]))</code></p><div id="c-rate"></div></div>
+<div class="card"><h3 style="margin:0 0 4px;font-size:14px">Error ratio</h3><p class="mut" style="font-size:12px"><code>errors / requests</code>, the service fails 1 in 5 on purpose</p><div id="c-err"></div></div>
+<div class="card"><h3 style="margin:0 0 4px;font-size:14px">p95 latency (seconds)</h3><p class="mut" style="font-size:12px"><code>histogram_quantile(0.95, ...)</code></p><div id="c-p95"></div></div>
+</div>
+
+<h2>Logs: asked of Loki with LogQL</h2>
+<div class="card">
+<p class="mut" style="font-size:12px"><code>{service_name="checkout-demo"} |= "checkout failed"</code></p>
+<table id="logs"></table>
+<p class="mut" style="font-size:12px">Each line carries the <code>trace_id</code> and <code>span_id</code> of the request that produced it, so a log line leads straight to its trace.</p>
+</div>
+
+<h2>Traces: the trace that the first error log points at</h2>
+<div class="card"><div id="trace"></div><p class="mut" style="font-size:12px" id="traceid"></p></div>
+
+<h2>Something that bit me</h2>
+<div class="note"><b>The p95 was off by two orders of magnitude.</b> The first version reported a p95 of 4.75 seconds for requests that took about 40 milliseconds. The OpenTelemetry SDK's default histogram buckets are written for milliseconds (0, 5, 10, 25 ... 10000), and my metric is in seconds, so every request fell into the first bucket and the quantile was interpolated inside it. The fix is a <code>View</code> with buckets in seconds, and the test now fails if p95 is not under one second.</div>
+
+<h2>The checks</h2>
+<div class="card">
+<table>
+<tr><th>Backend</th><th>Question</th><th>Expected</th></tr>
+<tr><td>Mimir</td><td><code>sum(checkout_requests_total)</code></td><td>greater than 0</td></tr>
+<tr><td>Mimir</td><td><code>sum(checkout_errors_total)</code></td><td>greater than 0</td></tr>
+<tr><td>Mimir</td><td>p95 from the histogram</td><td>between 0 and 1 second</td></tr>
+<tr><td>Loki</td><td><code>{service_name="checkout-demo"} |= "checkout failed"</code></td><td>at least one stream</td></tr>
+<tr><td>Tempo</td><td>search <code>service.name=checkout-demo</code></td><td>at least one trace</td></tr>
+<tr><td>Grafana</td><td>provisioned data sources</td><td>3</td></tr>
+</table>
+</div>
+
+<h2>Run it yourself</h2>
+<div class="card"><pre>git clone https://github.com/gerardrecinto/otel-observability-lab
+cd otel-observability-lab
+./scripts/test.sh            # starts the stack, waits for data, checks every backend
+open http://localhost:3000   # Grafana, no login
+python3 scripts/record.py    # rewrites docs/data.json, the data on this page
+docker compose down -v</pre><p class="mut" style="font-size:12px">Needs Docker with Compose. About three minutes the first time.</p></div>
+
+<h2>Not covered</h2>
+<div class="card"><p>One node, local disk, no authentication, no retention limits, no alert rules and no Kubernetes deployment. The service is synthetic, so the numbers show the pipeline works, not how a real checkout behaves. Sampling, multi-tenancy and long-term storage in object storage are the next things a real deployment needs.</p></div>
+
+<footer>MIT licensed. Built by <a href="https://github.com/gerardrecinto">Gerard Recinto</a>.</footer>
+</main>
+<script>
+(async function(){
+var d;try{d=await (await fetch('data.json')).json()}catch(e){document.body.insertAdjacentHTML('beforeend','<p style="padding:16px">data.json not found</p>');return}
+document.getElementById('rec').textContent=d.recorded_at;
+function fmt(n,k){return n==null?'n/a':Number(n).toLocaleString(undefined,{maximumFractionDigits:k})}
+var t=d.totals,lc=d.log_counts;
+var stats=[[fmt(t.requests,0),'requests counted in Mimir'],[fmt(t.errors,0),'failed checkouts counted'],[fmt(t.p95_s*1000,0)+' ms','p95 latency (5 min window)'],[fmt(lc.errors_10m,0)+' / '+fmt(lc.all_10m,0),'error log lines / all log lines, last 10 min']];
+document.getElementById('stats').innerHTML=stats.map(function(s){return '<div class="card stat"><b>'+s[0]+'</b><span>'+s[1]+'</span></div>'}).join('');
+function line(id,pts,color,unit,scale){
+ if(!pts.length){document.getElementById(id).textContent='no data';return}
+ var W=300,H=120,L=34,B=18,T=6,R=6,xs=pts.map(function(p){return p[0]}),ys=pts.map(function(p){return p[1]*scale});
+ var x0=Math.min.apply(0,xs),x1=Math.max.apply(0,xs),ymax=Math.max.apply(0,ys)*1.15||1;
+ function X(v){return L+(v-x0)/(x1-x0||1)*(W-L-R)}function Y(v){return T+(1-v/ymax)*(H-T-B)}
+ var path=pts.map(function(p,i){return (i?'L':'M')+X(p[0]).toFixed(1)+','+Y(p[1]*scale).toFixed(1)}).join(' ');
+ var g='';[0,.5,1].forEach(function(f){var v=ymax*f;g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(L-4)+'" y="'+(Y(v)+3)+'" text-anchor="end">'+fmt(v,ymax<10?2:0)+'</text>'});
+ g+='<text x="'+L+'" y="'+(H-4)+'">-10 min</text><text x="'+(W-R)+'" y="'+(H-4)+'" text-anchor="end">now</text>';
+ document.getElementById(id).innerHTML='<svg viewBox="0 0 '+W+' '+H+'">'+g+'<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="2"/></svg>'+(unit?'<p class="mut" style="font-size:11px;margin:0">'+unit+'</p>':'');
+}
+line('c-rate',d.rate,'var(--c0)','requests / s',1);
+line('c-err',d.error_ratio,'var(--c2)','share of requests that failed',1);
+line('c-p95',d.p95,'var(--c1)','seconds',1);
+var rows=d.error_logs.map(function(l){var when=new Date(l.ts*1000).toISOString().slice(11,19);return '<tr><td>'+when+'</td><td>'+l.severity+'</td><td>'+l.line+'</td><td><code>'+(l.trace_id||'').slice(0,12)+'...</code></td></tr>'}).join('');
+document.getElementById('logs').innerHTML='<tr><th>time (UTC)</th><th>level</th><th>line</th><th>trace_id</th></tr>'+rows;
+var tr=d.trace;
+if(tr){var spans=tr.spans,tot=Math.max.apply(0,spans.map(function(s){return s.offset_ms+s.duration_ms}));
+ var W=900,rowH=30,H=spans.length*rowH+24,L=150,RW=130;
+ var s='<svg viewBox="0 0 '+W+' '+H+'">';
+ spans.forEach(function(sp,i){var y=i*rowH+6,x=L+sp.offset_ms/tot*(W-L-RW),w=Math.max(3,sp.duration_ms/tot*(W-L-RW));
+  s+='<text x="'+(L-8)+'" y="'+(y+14)+'" text-anchor="end" style="fill:var(--fg);font-size:12px">'+sp.name+'</text><rect x="'+x+'" y="'+y+'" width="'+w+'" height="18" rx="3" fill="'+(sp.error?'var(--c2)':'var(--c0)')+'"/><text x="'+(x+w+6)+'" y="'+(y+13)+'">'+sp.duration_ms+' ms'+(sp.error?' (error)':'')+'</text>'});
+ s+='<text x="'+L+'" y="'+(H-4)+'">0 ms</text><text x="'+(W-20)+'" y="'+(H-4)+'" text-anchor="end">'+tot.toFixed(1)+' ms</text></svg>';
+ document.getElementById('trace').innerHTML=s;document.getElementById('traceid').innerHTML='Tempo trace <code>'+tr.trace_id+'</code>. The parent span is marked as an error because the card was declined; the two child spans succeeded.'}
+})();
+</script>
+</body>
+</html>

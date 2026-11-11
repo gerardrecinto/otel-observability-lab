@@ -16,6 +16,7 @@ from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -31,6 +32,15 @@ metrics.set_meter_provider(
     MeterProvider(
         resource=resource,
         metric_readers=[PeriodicExportingMetricReader(OTLPMetricExporter(), export_interval_millis=5000)],
+        # The SDK's default histogram buckets are meant for milliseconds (0, 5, 10 ... 10000).
+        # This metric is in seconds, so without this view every request lands in the first
+        # bucket and a p95 query reports seconds for a request that took 40 milliseconds.
+        views=[
+            View(
+                instrument_name="checkout_duration_seconds",
+                aggregation=ExplicitBucketHistogramAggregation((0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0)),
+            )
+        ],
     )
 )
 
