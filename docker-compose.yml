@@ -1,0 +1,50 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.116.1
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    depends_on: [mimir, loki, tempo]
+
+  mimir:
+    image: grafana/mimir:2.15.0
+    command: ["-config.file=/etc/mimir/mimir.yaml"]
+    volumes:
+      - ./config/mimir.yaml:/etc/mimir/mimir.yaml:ro
+    ports: ["9009:9009"]
+
+  loki:
+    image: grafana/loki:3.3.2
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./config/loki.yaml:/etc/loki/loki.yaml:ro
+    ports: ["3100:3100"]
+
+  tempo:
+    image: grafana/tempo:2.7.0
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./config/tempo.yaml:/etc/tempo/tempo.yaml:ro
+    ports: ["3200:3200"]
+    user: root
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/ds.yaml:ro
+    ports: ["3000:3000"]
+    depends_on: [mimir, loki, tempo]
+
+  checkout-demo:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ./app:/app:ro
+    command: >
+      sh -c "pip install -q -r requirements.txt && python checkout_demo.py"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+    depends_on: [otel-collector]
